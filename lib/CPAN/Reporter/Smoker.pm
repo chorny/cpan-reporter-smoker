@@ -67,6 +67,10 @@ my %spec = (
     default => 0,
     is_valid => sub { /^[01]$/ },
   },
+  force_reuse => {
+    default => 0,
+    is_valid => sub { /^[01]$/ },
+  },
 );
 
 sub start {
@@ -158,10 +162,15 @@ sub start {
       $reset_string = 'CPAN::Index->reload; $CPAN::META->reset_tested; '
     }
 
+    my $cpan_config = q{};
     # Force trust_test_report_history if requested
-    my $trust_string = q{};
     if ( $args{force_trust} ) {
-      $trust_string = '$CPAN::Config->{trust_test_report_history} = 1; '
+      $cpan_config = '$CPAN::Config->{trust_test_report_history} = 1; '
+    }
+
+    # Force trust_test_report_history if requested
+    if ( $args{force_reuse} ) {
+      $cpan_config .= '$CPAN::Config->{build_dir_reuse} = 1; '
     }
 
     # Clean cache on start and count dists tested to trigger cache cleanup
@@ -202,7 +211,7 @@ sub start {
         }
         # invoke CPAN.pm to test distribution
         system($perl, "-MCPAN", "-e",
-          "\$CPAN::Config->{test_report} = 1; " . $trust_string
+          "\$CPAN::Config->{test_report} = 1; " . $cpan_config
           . $reset_string . ($args{'install'} ? 'install' : 'test')
           . "( '$dists->[$d]' )"
         );
@@ -572,6 +581,9 @@ distribution if --list is provided). Valid values are 0 or 1. Defaults to 0
 is set to 1.  When set to 0, {trust_test_report_history} is left alone and
 whatever the user has configured for their CPAN client is used.
 Valid values are 0 or 1. Defaults to 0
+* {force_reuse} -- toggle whether to override CPAN's
+{build_dir_reuse} option. Usage is similar to force_trust
+
 
 = HINTS
 
